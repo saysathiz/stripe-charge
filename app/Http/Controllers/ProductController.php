@@ -33,7 +33,7 @@ class ProductController extends Controller
         $user = Auth::user();
         $paymentMethod = $request->input('payment_method');
         $user->createOrGetStripeCustomer();
-        $user->addPaymentMethod($paymentMethod);
+        $user->addPaymentMethod_test($paymentMethod);
         try
         {
             $user->charge($price*100, $paymentMethod);
