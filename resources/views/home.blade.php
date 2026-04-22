@@ -23,12 +23,15 @@
                     <div class="row">
                         @foreach($products as $row)
                         <div class="col-sm-4">
-                        <h3>{{ $row->name }}</h3>
-                        <h5>${{ $row->price }}</h5>
-                        <p>{{ $row->description }}</p>
-                        <a href="{{ url('charge/'.$row->id) }}" class="btn btn-info btn-sm">Buy Now</a>
+                            <h3>{{ $row->name }}</h3>
+                            <h5>${{ $row->price }}</h5>
+                            <p>{{ $row->description }}</p>
+                            <a href="{{ route('charge', $row) }}" class="btn btn-info btn-sm">Buy Now</a>
                         </div>
                         @endforeach
+                    </div>
+                    <div class="mt-3">
+                        {{ $products->links() }}
                     </div>
                 </div>
             </div>
