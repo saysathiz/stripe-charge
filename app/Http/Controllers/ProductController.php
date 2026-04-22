@@ -2,47 +2,54 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\Products;
-use Auth,Session;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Session;
 
 class ProductController extends Controller
 {
     public function index(Request $request)
     {
-        // Retrieve the product details and pass them to the view
-        $products = Products::all();
+        $page = (int) $request->input('page', 1);
+
+        $products = Cache::remember("products.page.{$page}", 60, function () {
+            return Products::orderBy('id')->paginate(12);
+        });
 
         return view('home', compact('products'));
     }
 
-    public function charge(Request $request, $product_id)
+    public function charge(Products $product)
     {
-        $product = Products::find($product_id);
         $user = Auth::user();
-        return view('payment',[
-            'user'=>$user,
+
+        return view('payment', [
+            'user' => $user,
             'intent' => $user->createSetupIntent(),
-            'product' => $product->name,
-            'price' => $product->price
+            'product' => $product,
         ]);
     }
 
-    public function processPayment(Request $request, String $product, $price)
+    public function processPayment(Request $request, Products $product)
     {
+        $request->validate(['payment_method' => 'required|string']);
+
         $user = Auth::user();
         $paymentMethod = $request->input('payment_method');
+
         $user->createOrGetStripeCustomer();
-        $user->addPaymentMethod_test($paymentMethod);
-        try
-        {
-            $user->charge($price*100, $paymentMethod);
+        $user->addPaymentMethod($paymentMethod);
+
+        try {
+            $user->charge((int) round($product->price * 100), $paymentMethod);
+        } catch (\Exception $e) {
+            return back()->withErrors(['message' => 'Error processing payment. ' . $e->getMessage()]);
         }
-        catch (\Exception $e)
-        {
-            return back()->withErrors(['message' => 'Error creating subscription. ' . $e->getMessage()]);
-        }
-        Session::flash('message', 'Payment was done.'); 
-        return redirect('home');
+
+        Session::flash('message', 'Payment was done.');
+
+        return redirect()->route('home');
     }
 }
